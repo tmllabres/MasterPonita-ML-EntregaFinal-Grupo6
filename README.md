@@ -43,8 +43,20 @@ Aquí entra la justificación de negocio: qué le cuesta al hotel cada tipo de e
 
 - **Objetivo:** predecir si una reserva se cancelará (`is_canceled = 1`) o no (`0`).
 - **Tipo de problema:** clasificación binaria supervisada.
-- **Filas:** 119.390 · **Columnas del CSV:** 32 · **Predictoras reales:** 29
-- **Reparto de clases:** 62,96 % no cancela / 37,04 % cancela (razón 1,70 : 1)
+- **Filas del CSV crudo:** 119.390 · **Columnas:** 32 · **Predictoras reales:** 29
+- **Reparto de clases en crudo:** 62,96 % no cancela / 37,04 % cancela (razón 1,70 : 1)
+- **Tras la limpieza:** _(rellenar: filas que quedan y reparto resultante)_
+
+<!--
+OJO, y esto hay que resolverlo antes de entrenar: los duplicados EXACTOS del CSV son
+32.252 filas, el 27 % del dataset, y el 63,4 % de ellas son cancelaciones. Si se
+eliminan, quedan 86.971 filas y el reparto pasa a 72,69 / 27,31. Diez puntos de
+prevalencia menos cambian la justificación de la métrica del apartado 5 y el tamaño
+del test del apartado 8.
+¿Son un error de registro o reservas legítimamente idénticas (mismo hotel, misma
+noche, mismo precio, grupos)? Decidid, justificadlo aquí, y que los números de los
+apartados 2, 5 y 8 salgan todos de la MISMA decisión.
+-->
 
 El diccionario de variables está en [`docs/diccionario_datos.md`](docs/diccionario_datos.md).
 
@@ -75,21 +87,52 @@ La tabla de abajo es el formato que más rinde: cada hallazgo, con su decisión 
 <!-- OBLIGATORIO. -->
 
 ```
-proyecto/
-├── main.py                    orquestador: python main.py
+Entrega-Final-ML/
+├── main.py                          orquestador: python main.py
+├── requirements.txt                 dependencias con versión fijada
+├── .python-version                  3.12
+├── .gitignore
+│
 ├── src/
-│   ├── config.py              parámetros, rutas y semilla
-│   ├── data_loader.py         cargar, limpiar, partir, preprocesador
-│   ├── model_trainer.py       registro de modelos y bucle comparador
-│   ├── evaluator.py           métricas y figuras; único que abre el test
-│   └── predictor.py           inferencia con el modelo entrenado
+│   ├── config.py                    parámetros, rutas, semilla y umbral
+│   ├── data_loader.py               cargar, limpiar, partir, preprocesador
+│   ├── model_trainer.py             registro de modelos y bucle comparador
+│   ├── evaluator.py                 métricas y figuras; único que abre el test
+│   └── predictor.py                 inferencia con el modelo entrenado
+│
 ├── notebooks/
-│   ├── exploracion/           EDA inicial y prototipos
-│   └── finales/               EDA y comparativa presentables
-├── data/raw/                  el CSV original, intacto
-├── models/                    artefactos entrenados
-├── outputs/                   figuras y tablas generadas
-└── docs/                      documentación adicional
+│   ├── exploracion/                 la cocina: se prueba y se falla
+│   │   ├── eda_inicial.ipynb
+│   │   └── pruebas_modelos.ipynb
+│   └── finales/                     el escaparate: lo que se defiende
+│       ├── eda_final.ipynb
+│       └── comparativa_modelos.ipynb
+│
+├── tests/                           pytest: contrato del registro y de la limpieza
+│   ├── conftest.py
+│   ├── test_data_loader.py
+│   └── test_model_trainer.py
+│
+├── data/
+│   ├── raw/dataset_practica_final.csv   el CSV original, intacto y versionado
+│   └── processed/                   intermedios (no se versiona)
+│
+├── models/                          artefactos entrenados (no se versiona)
+│   ├── mejor_modelo.pkl             el Pipeline COMPLETO: preprocesado + modelo
+│   ├── mejor_modelo.keras           solo si gana la red
+│   └── metadatos.json               ganador, umbral, columnas, semilla, versiones
+│
+├── outputs/                         generado por evaluator.py, SÍ se versiona
+│   ├── confusion_matrix.png
+│   ├── roc_curve.png                los cinco modelos en los mismos ejes
+│   ├── feature_importance.png
+│   ├── tabla_comparativa.csv
+│   └── metricas_test.json
+│
+└── docs/
+    ├── diccionario_datos.md         las 32 variables del CSV
+    ├── guion_practica.pdf           el enunciado
+    └── informe_final.pdf            este README exportado: lo que se sube a PontIA
 ```
 
 **Decisiones de diseño que hay que poder defender:**
@@ -114,8 +157,10 @@ OBLIGATORIO justificarlo. Elígela ANTES de entrenar y no la cambies después.
 
 **Métrica principal:** _(F1 de la clase positiva)_ · **Secundarias:** accuracy, precision, recall, ROC-AUC.
 
-Con un reparto 62,96 / 37,04, un modelo que dijera siempre «no cancela» ya acierta el
-**62,96 %** sin haber aprendido nada: por eso accuracy no sirve como criterio.
+Con el reparto del CSV crudo (62,96 / 37,04), un modelo que dijera siempre «no cancela»
+ya acierta el **62,96 %** sin haber aprendido nada: por eso accuracy no sirve como
+criterio. _(Si la limpieza elimina los duplicados, el porcentaje sube a 72,69 % y el
+argumento se refuerza: actualizad la cifra según lo que decidáis en el apartado 2.)_
 
 <!--
 Ojo, «F1 equilibra precision y recall» NO es una justificación: di qué error te duele
@@ -173,6 +218,10 @@ python main.py --demo
 python -m src.predictor
 ```
 
+> `models/` está en el `.gitignore`, así que en un clon recién hecho **todavía no existe
+> ningún artefacto**: hay que lanzar `python main.py` (o `--demo`) al menos una vez antes
+> de que la inferencia funcione.
+
 Salidas: figuras y tablas en `outputs/`, modelo en `models/`.
 
 ---
@@ -206,7 +255,8 @@ Las métricas de CV son media ± desviación sobre el train. La del test se mide
 
 **Modelo elegido:** _(…)_ · **Por qué gana:** _(…)_
 
-Métricas del ganador sobre el conjunto de test (23.878 reservas nunca vistas):
+Métricas del ganador sobre el conjunto de test _(N reservas nunca vistas: 23.878 si no
+se eliminan los duplicados, 17.394 si sí — poned el número real)_:
 
 | | valor |
 |---|---|
@@ -246,7 +296,33 @@ Candidatas honestas:
 
 ---
 
+## 11. Bonus técnicos implementados
+
+<!--
+NO es obligatorio, pero vale hasta 2 puntos adicionales y permite llegar al 10.
+El guion es tajante: «Es necesario que el sistema funcione para poder sumar la
+puntuación adicional». Un bonus a medias resta tiempo y no suma nota.
+Borra las filas que no hagáis: una tabla con seis «pendiente» es peor que tres filas.
+-->
+
+| Bonus | Estado | Dónde está | Qué demuestra |
+|---|---|---|---|
+| Optimización de hiperparámetros (`RandomizedSearchCV`) | | `src/model_trainer.py` · `config.BUSQUEDA` | |
+| Interpretabilidad (`feature_importances_` / SHAP) | | `src/evaluator.py` · `outputs/feature_importance.png` | |
+| Balanceo de clases (`class_weight` / SMOTE) | | | |
+| API REST con FastAPI (`/train`, `/predict`, `/evaluate`) | | | |
+| Registro de experimentos con MLflow | | | |
+| Interfaz visual (Streamlit / Gradio) | | | |
+
+---
+
 ## Anexos
 
-- [Diccionario de variables](docs/diccionario_datos.md)
-- Notebooks: [`notebooks/finales/`](notebooks/finales/)
+- [Diccionario de variables](docs/diccionario_datos.md) — las 32 columnas del CSV
+- [Guion de la práctica](docs/guion_practica.pdf) — el enunciado del profesor
+- Notebooks que se defienden:
+  - [`notebooks/finales/eda_final.ipynb`](notebooks/finales/eda_final.ipynb) — el EDA presentable
+  - [`notebooks/finales/comparativa_modelos.ipynb`](notebooks/finales/comparativa_modelos.ipynb) — la tabla y las figuras
+- Notebooks de trabajo (la cocina): [`notebooks/exploracion/`](notebooks/exploracion/)
+
+**Tests:** `python -m pytest -q` desde la raíz.

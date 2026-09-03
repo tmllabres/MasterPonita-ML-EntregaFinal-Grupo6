@@ -48,6 +48,20 @@ class ModeloBase(BaseEstimator, ClassifierMixin):
         raise NotImplementedError
 
 
+# ── La linea del suelo ───────────────────────────────────────────────────────
+class Baseline(ModeloBase):
+    """DummyClassifier: la referencia contra la que se miden los cinco de verdad.
+
+    No aprende nada, y ese es justo el punto: con strategy="most_frequent" dice
+    siempre "no cancela" y ya acierta el 62,96 %. Cualquier modelo que no supere
+    claramente esta fila no esta aportando nada, y sin la fila no hay forma de saberlo.
+
+    Ojo con la metrica: en accuracy saca 0,63, pero en F1 de la clase positiva saca
+    0,00, porque nunca predice un 1. Las dos cosas dicen lo mismo desde dos sitios.
+    """
+    nombre = "baseline"
+
+
 # ── Los cinco obligatorios ───────────────────────────────────────────────────
 class Logistica(ModeloBase):
     """Regresión logística. Necesita escalado. C es la inversa de la regularización."""
@@ -84,6 +98,7 @@ class RedKeras(ModeloBase):
 
 # ── El registro ──────────────────────────────────────────────────────────────
 REGISTRO = {
+    "baseline": Baseline,
     "logistica": Logistica,
     "arbol": Arbol,
     "bosque": Bosque,
@@ -93,17 +108,26 @@ REGISTRO = {
 
 
 # ── El comparador ────────────────────────────────────────────────────────────
-def entrenar_y_comparar(X_train, y_train, preprocesador) -> "pd.DataFrame":
-    """Recorre config.MODELOS_ACTIVOS y devuelve la tabla comparativa.
+def entrenar_y_comparar(X_train, y_train, preprocesador) -> tuple:
+    """Recorre config.MODELOS_ACTIVOS y devuelve (tabla, modelos).
 
-    Protocolo idéntico para los cinco, que es lo que hace justa la comparación:
+    Protocolo idéntico para los seis, que es lo que hace justa la comparación:
       · el mismo StratifiedKFold(config.CV_FOLDS) con la misma semilla
       · el preprocesado DENTRO del Pipeline, para que se ajuste en cada fold
       · scoring=config.METRICA_PRINCIPAL — si no lo pones, GridSearchCV optimiza
         accuracy sin decírtelo, y luego presentas F1 en el informe
       · media ± desviación de la validación cruzada, nunca una sola partición
 
-    Devuelve un DataFrame ordenado por la métrica principal.
+    Devuelve DOS cosas:
+      · tabla:   DataFrame ordenado por la métrica principal, una fila por modelo.
+      · modelos: dict {nombre: Pipeline ajustado con TODO el train}.
+
+    Por qué también los pipelines, y no solo la tabla: el enunciado pide la curva
+    ROC de los cinco modelos EN LOS MISMOS EJES. Para dibujar cinco curvas hacen
+    falta cinco `predict_proba` sobre el test, o sea los cinco modelos ajustados.
+    Si aquí solo saliera la tabla, main.py se quedaría con el ganador y la figura
+    tendría una sola línea. El coste es un refit por modelo sobre el train
+    completo, después de la validación cruzada.
     """
     raise NotImplementedError("TODO")
 
@@ -113,15 +137,20 @@ def elegir_mejor(tabla):
     raise NotImplementedError("TODO")
 
 
-def reentrenar_ganador(nombre, X_train, y_train, preprocesador):
-    """Reentrena el ganador con TODO el train y devuelve el Pipeline ajustado."""
-    raise NotImplementedError("TODO")
-
-
-def guardar(pipeline, ruta=None):
-    """Persiste el Pipeline COMPLETO, no solo el estimador.
+def guardar(pipeline, nombre, metricas, ruta=None):
+    """Persiste el Pipeline COMPLETO, no solo el estimador, más sus metadatos.
 
     Si guardas solo el modelo, el preprocesado se pierde y las predicciones salen
-    mal sin dar error. Keras es la excepción: .keras aparte + el resto en .pkl.
+    mal sin dar error. Keras es la excepción: config.MODELO_KERAS aparte (pesos y
+    arquitectura) y el resto del Pipeline en config.MODELO_PKL.
+
+    Escribe además config.METADATOS con lo que predictor.py necesita para no tener
+    que adivinar nada:
+      · nombre del modelo ganador
+      · umbral realmente usado al predecir (no el que hoy tenga config.UMBRAL:
+        el que se congeló al guardar; si luego mueves config.UMBRAL, las
+        predicciones de un modelo ya guardado no pueden cambiar en silencio)
+      · las columnas crudas que espera de entrada, en orden
+      · métrica principal, semilla y versiones de las librerías
     """
     raise NotImplementedError("TODO")

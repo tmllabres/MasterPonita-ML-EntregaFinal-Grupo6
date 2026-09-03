@@ -19,7 +19,7 @@ def metricas(y_true, y_pred, y_proba=None) -> dict:
 
 
 def matriz_confusion(y_true, y_pred, ruta=None):
-    """Figura obligatoria del enunciado. Guarda en outputs/confusion_matrix.png.
+    """Figura obligatoria del enunciado. Guarda en config.FIG_CONFUSION.
 
     Pon los números absolutos y el porcentaje por fila: el de la diagonal de TP es
     el recall y el de TN la specificity, y así se lee sola.
@@ -28,7 +28,7 @@ def matriz_confusion(y_true, y_pred, ruta=None):
 
 
 def curva_roc(modelos_proba: dict, y_true, ruta=None):
-    """Figura obligatoria del enunciado. Guarda en outputs/roc_curve.png.
+    """Figura obligatoria del enunciado. Guarda en config.FIG_ROC.
 
     LAS CINCO CURVAS EN LOS MISMOS EJES, con su AUC en la leyenda y la diagonal
     del azar. Cinco gráficos sueltos no demuestran nada.
@@ -51,7 +51,7 @@ def barrido_umbral(y_true, y_proba):
 
 
 def importancias(pipeline, X, y, ruta=None):
-    """Gráfico de importancia de variables del ganador.
+    """Gráfico de importancia de variables del ganador. Guarda en config.FIG_IMPORTANCIAS.
 
     Ojo: feature_importances_ del bosque favorece a las columnas con muchos valores
     distintos (country). permutation_importance es más honesta y funciona con
@@ -61,6 +61,12 @@ def importancias(pipeline, X, y, ruta=None):
 
 
 def informe(tabla_comparativa, metricas_test: dict, ruta=None):
-    """Vuelca la tabla comparativa y las métricas de test a outputs/, listas para
-    pegarlas en el README."""
+    """Vuelca los resultados a outputs/, listos para pegarlos en el README.
+
+    Dos ficheros, con los nombres que fija config:
+      · config.TABLA_COMPARATIVA (.csv) — la tabla del apartado 7
+      · config.METRICAS_TEST (.json)    — las métricas del ganador, del apartado 8
+    Los lee después notebooks/finales/comparativa_modelos.ipynb, así que el notebook
+    no vuelve a entrenar y no puede contradecir al pipeline.
+    """
     raise NotImplementedError("TODO")

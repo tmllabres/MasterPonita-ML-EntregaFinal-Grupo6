@@ -9,6 +9,11 @@ env/
 # ── Jupyter ──────────────────────────────────────────────────────────────────
 .ipynb_checkpoints/
 
+# ── Tests ────────────────────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+
 # ── Datos ────────────────────────────────────────────────────────────────────
 # El CSV original SÍ se sube (17 MB, por debajo del límite de GitHub): sin él, el
 # evaluador no puede ejecutar nada. Lo que se genera, no.
@@ -26,6 +31,28 @@ models/*
 # Las figuras que van en el informe SÍ se suben; comenta esto si las incluyes.
 # outputs/*
 # !outputs/.gitkeep
+
+# ── Rastro que dejan las librerías al entrenar ───────────────────────────────
+# Ninguno de estos lo escribes tú: los crean TensorFlow, CatBoost o MLflow por su
+# cuenta la primera vez que entrenas. Si no están aquí, el primer «git add .» los
+# sube y ensucia el repositorio.
+# Ojo: en un .gitignore la almohadilla solo abre comentario al PRINCIPIO de la
+# línea. «logs/  # TensorBoard» no ignora logs/, ignora un fichero llamado
+# «logs/  # TensorBoard». Por eso cada comentario va en su propia línea.
+
+# Keras: pesos y arquitectura del modelo
+*.keras
+*.h5
+
+# TensorBoard
+logs/
+
+# CatBoost, si acabas usándolo en vez de XGBoost
+catboost_info/
+
+# MLflow (bonus): un directorio por experimento
+mlruns/
+mlartifacts/
 
 # ── Sistema ──────────────────────────────────────────────────────────────────
 .DS_Store

@@ -20,32 +20,43 @@ def main(demo: bool = False) -> None:
     print("[1/5] Cargando y preparando datos…")
     d = data_loader.preparar()
 
-    # 2. Entrenar los cinco con el mismo protocolo y compararlos por validación
+    # 2. Entrenar los seis con el mismo protocolo y compararlos por validación
     #    cruzada dentro del train. El test no se toca aquí.
+    #    Devuelve la tabla Y los pipelines ajustados: los cinco hacen falta para la
+    #    curva ROC comparativa del paso 4.
     print("[2/5] Entrenando y comparando modelos…")
-    tabla = model_trainer.entrenar_y_comparar(d["X_train"], d["y_train"], d["preprocesador"])
+    tabla, modelos = model_trainer.entrenar_y_comparar(d["X_train"], d["y_train"],
+                                                       d["preprocesador"])
     print(tabla)
 
-    # 3. Elegir el ganador por la métrica principal y reentrenarlo con todo el train.
+    # 3. Elegir el ganador por la métrica principal.
     print("[3/5] Eligiendo el mejor modelo…")
     ganador = model_trainer.elegir_mejor(tabla)
-    pipeline = model_trainer.reentrenar_ganador(ganador, d["X_train"], d["y_train"],
-                                                d["preprocesador"])
+    pipeline = modelos[ganador]
 
     # 4. Evaluar UNA sola vez sobre el test, y generar las figuras obligatorias.
     print(f"[4/5] Evaluando «{ganador}» sobre el test…")
-    y_pred = pipeline.predict(d["X_test"])
     y_proba = pipeline.predict_proba(d["X_test"])[:, 1]
+
+    # El 0/1 sale de comparar contra config.UMBRAL, no de pipeline.predict(): así el
+    # umbral tiene un dueño único y se puede mover y justificar desde un solo sitio.
+    y_pred = (y_proba >= config.UMBRAL).astype(int)
+
     m = evaluator.metricas(d["y_test"], y_pred, y_proba)
     evaluator.matriz_confusion(d["y_test"], y_pred)
-    evaluator.curva_roc({ganador: y_proba}, d["y_test"])
+
+    # Las cinco curvas en los mismos ejes, que es lo que pide el enunciado: una
+    # predict_proba por modelo sobre el mismo test.
+    evaluator.curva_roc({n: p.predict_proba(d["X_test"])[:, 1] for n, p in modelos.items()},
+                        d["y_test"])
+
     evaluator.importancias(pipeline, d["X_test"], d["y_test"])
     evaluator.informe(tabla, m)
     print(m)
 
     # 5. Persistir el artefacto para que predictor.py pueda usarlo sin reentrenar.
     print("[5/5] Guardando el modelo…")
-    model_trainer.guardar(pipeline)
+    model_trainer.guardar(pipeline, ganador, m)
     print("Listo. Figuras en outputs/, modelo en models/.")
 
 

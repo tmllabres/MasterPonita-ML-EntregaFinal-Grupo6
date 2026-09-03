@@ -15,8 +15,13 @@ from . import config
 def cargar(ruta=None):
     """Carga el Pipeline entrenado (preprocesado + modelo) y sus metadatos.
 
-    Si el ganador es la red de Keras son DOS ficheros: el .keras con arquitectura
-    y pesos, y el .pkl con el ColumnTransformer ya ajustado.
+    Lee config.MODELO_PKL y config.METADATOS, los mismos que escribe
+    model_trainer.guardar(). Si el ganador es la red de Keras son DOS ficheros:
+    config.MODELO_KERAS con arquitectura y pesos, y el .pkl con el
+    ColumnTransformer ya ajustado.
+
+    Devuelve (pipeline, metadatos). El umbral sale de los metadatos, NO de
+    config.UMBRAL: el que vale es el que se congeló al entrenar este artefacto.
     """
     raise NotImplementedError("TODO")
 
